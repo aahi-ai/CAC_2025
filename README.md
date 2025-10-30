@@ -1,4 +1,4 @@
-// TerraBloom Source Code
+Terra Bloom Source Code
 
 var index_palettes = require('users/gena/packages:palettes');
 var jrc = ee.Image("JRC/GSW1_4/GlobalSurfaceWater");
@@ -210,7 +210,7 @@ function createWaterMask(image, dataType) {
 
 function maskLandsatClouds(image) {
   var qa = image.select('QA_PIXEL');
-  
+
   var cloudBit = 1 << 3;
   var cloudShadowBit = 1 << 4;
   var snowBit = 1 << 5;
@@ -275,7 +275,6 @@ function fillGaps(image, dataType) {
   
   return result2.unmask(filled3);
 }
-
 
 function applyShoreBuffer(image, dataType, bufferMeters) {
   bufferMeters = bufferMeters || 90;
@@ -724,11 +723,11 @@ left.controlPanel = ui.Panel();
 left.divider = ui.Panel();
 left.info = {};
 left.info.titleLabel = ui.Label('TerraBloom');
-left.info.aboutLabel = ui.Label("TerraBloom TerraBloom is a Google Earth Engine–powered web app designed to detect and analyze harmful algal blooms (HABs) worldwide using satellite imagery. Users can select an area of interest, choose a time range and satellite dataset, and calculate bloom indicators using indices such as NDVI, NDWI, and the Floating Algae Index. By combining real-time environmental data with an intuitive interface, TerraBloom empowers researchers, students, and policymakers to monitor water quality and better understand the global impact of harmful algal blooms.");
+left.info.aboutLabel = ui.Label("TerraBloom is a Google Earth Engine–powered web app designed to detect and analyze harmful algal blooms (HABs) worldwide using satellite imagery. Users can select an area of interest, choose a time range and satellite dataset, and calculate bloom indicators using indices such as NDVI, NDWI, and the Floating Algae Index. By combining real-time environmental data with an intuitive interface, TerraBloom empowers researchers, students, and policymakers to monitor water quality and better understand the global impact of harmful algal blooms.");
 left.info.paper = ui.Label({value: 'References:', style: {width: '100px', margin: '0px 0px 0px 8px', height: '20px', fontWeight: 'bold'}});
 left.info.paperLabel1 = ui.Label({value: 'FAI', targetUrl: 'https://doi.org/10.1016/j.rse.2009.05.012'});
 left.info.paperLabel2 = ui.Label({value: 'NDCI', targetUrl: 'https://doi.org/10.1016/j.rse.2010.04.002'});
-left.info.lab = ui.Label({value: 'Our Research Group', targetUrl: 'https://hydroinformatics.uiowa.edu/'});
+left.info.lab = ui.Label({value: 'Aahlad Bysani', targetUrl: 'https://hydroinformatics.uiowa.edu/'});
 left.info.horizontalPanel = ui.Panel({widgets: [left.info.paper, left.info.paperLabel1, left.info.paperLabel2], layout: ui.Panel.Layout.flow('horizontal')});
 left.info.panel = ui.Panel([left.info.titleLabel, left.info.aboutLabel, left.info.horizontalPanel, left.info.lab]);
 
@@ -854,7 +853,6 @@ left.dataDate.bufferTextbox = ui.Textbox({
   style: {textAlign: 'center', backgroundColor: 'EBEAEA'}
 });
 
-left.dataDate.chlaCheckbox = ui.Checkbox({label: 'Calculate Chlorophyll-a', value: false});
 
 left.dataDate.panel = ui.Panel([
   left.dataDate.label1, left.dataDate.slider1, left.dataDate.label2, left.dataDate.slider2,
@@ -865,7 +863,6 @@ left.dataDate.panel = ui.Panel([
 left.dataDate.panel2 = ui.Panel([
   left.dataDate.thresholdLabel, left.dataDate.trTextbox,
   left.dataDate.bufferLabel, left.dataDate.bufferTextbox,
-  left.dataDate.chlaCheckbox
 ]);
 
 left.computeButton = ui.Button({
@@ -874,7 +871,6 @@ left.computeButton = ui.Button({
     var mosaic = left.dataDate.mosaicc.getValue() || '3';
     var dataType = (!left.dataDate.data.getValue()) ? 'S2' : left.dataDate.data.getValue();
     var indexType = left.dataDate.indexSelect.getValue() || 'FAI';
-    var calcChla = left.dataDate.chlaCheckbox.getValue();
     var img, S2img_type;
     
     var Tr = parseFloat(left.dataDate.trTextbox.getValue());
@@ -984,7 +980,7 @@ left.computeButton = ui.Button({
     }
     
     var waterMask = createWaterMask(img, dataType);
-    waterMask = waterMask.and(permanentWater);
+    waterMask = waterMask.and(permanentWater); 
     img = img.updateMask(waterMask);
     
     if (bufferDist > 0) {
@@ -998,24 +994,7 @@ left.computeButton = ui.Button({
     indexMap = computeIndex(img, dataType, S2img_type, indexType);
     binaryMap = indexMap.gt(Tr).selfMask();
     
-    if (calcChla) chlaMap = computeChlorophyllA(img, dataType);
-
-    if (aoi) leftMap.layers().add(ui.Map.Layer(aoi, {color: 'A760D8'}, 'AOI', false));
     
-    leftMap.layers().add(ui.Map.Layer(img, eval("visualization".concat("_", dataType)), 'Original Image'));
-
-    var indexPalette, indexMin, indexMax;
-    if (indexType === 'FAI') { indexPalette = index_palettes.colorbrewer.Greens[7]; indexMin = -0.05; indexMax = 0.1; }
-    else if (indexType === 'NDCI') { indexPalette = index_palettes.colorbrewer.Blues[7]; indexMin = -0.5; indexMax = 0.5; }
-    else if (indexType === 'FLH') { indexPalette = index_palettes.colorbrewer.Reds[7]; indexMin = -0.02; indexMax = 0.02; }
-    else if (indexType === '2BDA') { indexPalette = index_palettes.colorbrewer.Oranges[7]; indexMin = 0.5; indexMax = 2.0; }
-    else if (indexType === '3BDA') { indexPalette = index_palettes.colorbrewer.Purples[7]; indexMin = -0.02; indexMax = 0.1; }
-    else if (indexType === 'CI') { indexPalette = index_palettes.colorbrewer.YlGn[7]; indexMin = -0.02; indexMax = 0.02; }
-
-    leftMap.layers().add(ui.Map.Layer(indexMap, {palette: indexPalette, min: indexMin, max: indexMax}, indexType));
-    leftMap.layers().add(ui.Map.Layer(binaryMap, {palette: "00FF00, FF0000"}, 'Algal Bloom'));
-    
-    if (calcChla) leftMap.layers().add(ui.Map.Layer(chlaMap, {palette: ['blue', 'cyan', 'yellow', 'red'], min: 0, max: 100}, 'Chlorophyll-a (μg/L)'));
 
     print('Images used: ' + collection.size().getInfo());
     updateDownloadableItem();
@@ -1135,7 +1114,6 @@ right.dataDate.bufferTextbox = ui.Textbox({
   style: {textAlign: 'center', backgroundColor: 'EBEAEA'}
 });
 
-right.dataDate.chlaCheckbox = ui.Checkbox({label: 'Calculate Chlorophyll-a', value: false});
 
 right.dataDate.panel = ui.Panel([
   right.titleLabel, right.dataDate.label1, right.dataDate.slider1, right.dataDate.label2, right.dataDate.slider2,
@@ -1146,7 +1124,6 @@ right.dataDate.panel = ui.Panel([
 right.dataDate.panel2 = ui.Panel([
   right.dataDate.thresholdLabel, right.dataDate.trTextbox,
   right.dataDate.bufferLabel, right.dataDate.bufferTextbox,
-  right.dataDate.chlaCheckbox
 ]);
 
 right.computeButton = ui.Button({
@@ -1155,7 +1132,6 @@ right.computeButton = ui.Button({
     var mosaic = right.dataDate.mosaicc.getValue() || '3';
     var dataType = (!right.dataDate.data.getValue()) ? 'S2' : right.dataDate.data.getValue();
     var indexType = right.dataDate.indexSelect.getValue() || 'FAI';
-    var calcChla = right.dataDate.chlaCheckbox.getValue();
     var img, S2img_type;
     
     var Tr = parseFloat(right.dataDate.trTextbox.getValue());
@@ -1277,25 +1253,7 @@ right.computeButton = ui.Button({
     indexMap_right = computeIndex(img, dataType, S2img_type, indexType);
     binaryMap_right = indexMap_right.gt(Tr).selfMask();
     
-    if (calcChla) chlaMap_right = computeChlorophyllA(img, dataType);
-
-    if (aoi) rightMap.layers().add(ui.Map.Layer(aoi, {color: 'A760D8'}, 'AOI', false));
     
-    rightMap.layers().add(ui.Map.Layer(img, eval("visualization".concat("_", dataType)), 'Original Image'));
-
-    var indexPalette, indexMin, indexMax;
-    if (indexType === 'FAI') { indexPalette = index_palettes.colorbrewer.Greens[7]; indexMin = -0.05; indexMax = 0.1; }
-    else if (indexType === 'NDCI') { indexPalette = index_palettes.colorbrewer.Blues[7]; indexMin = -0.5; indexMax = 0.5; }
-    else if (indexType === 'FLH') { indexPalette = index_palettes.colorbrewer.Reds[7]; indexMin = -0.02; indexMax = 0.02; }
-    else if (indexType === '2BDA') { indexPalette = index_palettes.colorbrewer.Oranges[7]; indexMin = 0.5; indexMax = 2.0; }
-    else if (indexType === '3BDA') { indexPalette = index_palettes.colorbrewer.Purples[7]; indexMin = -0.02; indexMax = 0.1; }
-    else if (indexType === 'CI') { indexPalette = index_palettes.colorbrewer.YlGn[7]; indexMin = -0.02; indexMax = 0.02; }
-
-    rightMap.layers().add(ui.Map.Layer(indexMap_right, {palette: indexPalette, min: indexMin, max: indexMax}, indexType));
-    rightMap.layers().add(ui.Map.Layer(binaryMap_right, {palette: "00FF00, FF0000"}, 'Algal Bloom'));
-    
-    if (calcChla) rightMap.layers().add(ui.Map.Layer(chlaMap_right, {palette: ['blue', 'cyan', 'yellow', 'red'], min: 0, max: 100}, 'Chlorophyll-a (μg/L)'));
-
     print('Images used: ' + collection_right.size().getInfo());
     updateDownloadableItem();
   }
